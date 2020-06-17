@@ -1,0 +1,15 @@
+{
+  "name": "ecserver",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "server": "nodemon ./server.js"
+  },
+  "author": "Pike",
+  "devDependencies": {
+    "nodemon": "^2.0.4"
+  },
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}
