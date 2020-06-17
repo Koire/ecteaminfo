@@ -13,7 +13,8 @@ const port = 3000
 const genHeaders = apiKey => {
     const now = Math.floor(Date.now()/1000)
     const {clientSecret} = process.env
-    const signature = `${clientSecret}:${apiKey}:now`
+    console.log("secret", clientSecret)
+    const signature = `${clientSecret}:${apiKey}:${now}`
     return {
         'X-WarDragons-APIKey': apiKey,
         'X-WarDragons-Request-Timestamp': now,
@@ -30,22 +31,18 @@ app.get("/signin", (req, res) => {
     res.redirect(WDAPI)
 })
 app.get("/myprofile", async(req, res) => {
-    console.log(endpoints.getMyProfile("apikey-tqYfz7RgRTqk3zGu-SrNyA"))
-    const profileResponse = await fetch(endpoints.getMyProfile("apikey-tqYfz7RgRTqk3zGu-SrNyA"))
-    console.log(profileResponse)
-    const resData = await profileResponse.json()
-    console.log(resData)
-    res.send(resData)
+    const profileResponse = await fetch(endpoints.getMyProfile("apikey-WDpEEsyHQP-a9a4SVYfCRQ"), {
+        headers: genHeaders("apikey-WDpEEsyHQP-a9a4SVYfCRQ")
+    })
+    res.send(await profileResponse.json())
 })
 app.get("/teaminfo", async(req, res) => {
-    console.log(genHeaders("apikey-tqYfz7RgRTqk3zGu-SrNyA"))
     const response = await fetch(endpoints.teamContribution(), {
         headers: genHeaders("apikey-tqYfz7RgRTqk3zGu-SrNyA")
     })
-    console.log(response)
     const resData = await response
-    // const resJson = await resData.json()
-    res.send("hello")
+    const resJson = await resData.json()
+    res.send(resJson)
 })
 app.get("/castleinfo", async (req, res) => {
 
