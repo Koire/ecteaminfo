@@ -2,6 +2,7 @@ import express from "express"
 import dotenv from "dotenv"
 import fetch from "node-fetch"
 import crypto from "crypto"
+import cors from "cors"
 import * as endpoints from "./apiEndpoints.mjs";
 
 
@@ -13,7 +14,6 @@ const port = 3000
 const genHeaders = apiKey => {
     const now = Math.floor(Date.now()/1000)
     const {clientSecret} = process.env
-    console.log("secret", clientSecret)
     const signature = `${clientSecret}:${apiKey}:${now}`
     return {
         'X-WarDragons-APIKey': apiKey,
@@ -21,7 +21,11 @@ const genHeaders = apiKey => {
         "X-WarDragons-Signature": crypto.createHash("sha256").update(signature).digest("hex")
     }
 }
-app.get("/", (req, res) => res.send("good day"))
+app.use(express.static("../webclient/dist"))
+if (process.env.NODE_ENV === "development") {
+    app.use(cors())
+}
+
 app.get("/signin", (req, res) => {
     const WDAPI = new URL("https://api-dot-pgdragonsong.appspot.com/api/authorize")
     WDAPI.searchParams.append("client_id", process.env.clientId)

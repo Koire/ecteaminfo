@@ -3,6 +3,7 @@
   "type": "module",
   "main": "server.mjs",
   "scripts": {
+    "dev-server": "NODE_ENV=development nodemon ./server",
     "server": "nodemon ./server"
   },
   "author": "Pike",
@@ -10,6 +11,7 @@
     "nodemon": "^2.0.4"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "mongoose": "^5.9.19",
