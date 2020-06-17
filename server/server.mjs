@@ -34,7 +34,7 @@ app.get("/myprofile", async(req, res) => {
     const profileResponse = await fetch(endpoints.getMyProfile("apikey-WDpEEsyHQP-a9a4SVYfCRQ"), {
         headers: genHeaders("apikey-WDpEEsyHQP-a9a4SVYfCRQ")
     })
-    res.send(await profileResponse.json())
+    res.send((await profileResponse.json()))
 })
 app.get("/teaminfo", async(req, res) => {
     const response = await fetch(endpoints.teamContribution(), {
@@ -42,7 +42,13 @@ app.get("/teaminfo", async(req, res) => {
     })
     const resData = await response
     const resJson = await resData.json()
-    res.send(resJson)
+    const prettyRes = resJson.entries.map(({stats: {monthly_gold, monthly_mats, monthly_ships}, for_name}) => ({
+        name: for_name,
+        gold:monthly_gold,
+        mats: monthly_mats,
+        kills: monthly_ships
+    }))
+    res.send(prettyRes)
 })
 app.get("/castleinfo", async (req, res) => {
 
