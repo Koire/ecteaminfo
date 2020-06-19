@@ -1,7 +1,7 @@
 import { Http } from "./http"
 
 //Name the actions so default will show in Redux DevTools
-const BaseURL = "https://fresh-catfish-2.telebit.io"
+const BaseURL = process.env.dev ? "https://fresh-catfish-2.telebit.io" : "http://localhost:3000"
 const defaultHttpSuccess = (state, response) => ({...state, ...response})
 const defaultHttpError = (state, response) => ({
     ...state,

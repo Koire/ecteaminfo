@@ -4,11 +4,23 @@ import fetch from "node-fetch"
 import crypto from "crypto"
 import cors from "cors"
 import * as endpoints from "./apiEndpoints.mjs";
-
+import cookieParser from "cookie-parser";
+import bodyParser from "body-parser"
+import bcrypt from "bcrypt"
+import {Player} from "./db/models/players.js";
+import {connectToDb} from "./db/connect.js";
 
 dotenv.config({path: "../.env"})
 
+
 const app = express()
+app.use(express.static("../webclient/dist"))
+app.use(cookieParser(process.env.secret))
+app.use( bodyParser.json() )
+app.use( bodyParser.urlencoded({
+    extended: true
+}))
+
 const port = 3000
 
 const genHeaders = apiKey => {
@@ -21,7 +33,8 @@ const genHeaders = apiKey => {
         "X-WarDragons-Signature": crypto.createHash("sha256").update(signature).digest("hex")
     }
 }
-app.use(express.static("../webclient/dist"))
+
+
 if (process.env.NODE_ENV === "development") {
     app.use(cors())
 }
@@ -35,10 +48,29 @@ app.get("/signin", (req, res) => {
     res.redirect(WDAPI)
 })
 app.get("/myprofile", async(req, res) => {
-    const profileResponse = await fetch(endpoints.getMyProfile("apikey-WDpEEsyHQP-a9a4SVYfCRQ"), {
+    fetch(endpoints.getMyProfile("apikey-WDpEEsyHQP-a9a4SVYfCRQ"), {
         headers: genHeaders("apikey-WDpEEsyHQP-a9a4SVYfCRQ")
     })
-    res.send((await profileResponse.json()))
+        .then(res => res.json())
+        .then(jsonData => res.send(jsonData))
+    //res.send((await profileResponse.json()))
+})
+app.get("/login", async(req, res) => {
+
+})
+app.post("/login", async(req, res) => {
+    const {username, password } = req.body
+    const pw = bcrypt.hashSync(password, 10)
+    bcrypt.hash(password, 8, (err, hash) => {
+        console.log("pw:", hash)
+        bcrypt.hash(hash, 8, (err, hash2) => {
+            bcrypt.compare(hash, hash2, (err, res2) => {
+                console.log("compared:", res2)
+                res.send("Hello")
+            })
+        })
+    })
+
 })
 app.get("/teaminfo", async(req, res) => {
     const response = await fetch(endpoints.teamContribution(), {
@@ -68,5 +100,5 @@ app.get("/authorize", async (req, res) => {
         .then(jsonData => console.log(jsonData))
     res.send(`Thank you for authorizing with PG, your player id is: ${playerId} and your code is: ${authCode}`)
 })
-app.listen(port, () => console.log("Cooking With Fire"))
+connectToDb().then(async () => app.listen(port, () => console.log("Cooking With Fire")))
 
