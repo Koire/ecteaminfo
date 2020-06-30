@@ -4,7 +4,11 @@ dotenv.config({path: "../../.env"})
 
 export const connectToDb = async () => {
     try {
-        await mongoose.connect(process.env.mongoDB, { useNewUrlParser: true,  useUnifiedTopology: true })
+        await mongoose.connect(process.env.mongoDB, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+            useFindAndModify: false
+        })
     }
     catch (err) {
         console.log(err)

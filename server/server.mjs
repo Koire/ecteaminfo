@@ -8,7 +8,12 @@ import cookieParser from "cookie-parser";
 import bodyParser from "body-parser"
 import bcrypt from "bcrypt"
 import {Player} from "./db/models/players.js";
+import {Team} from "./db/models/teams.js"
 import {connectToDb} from "./db/connect.js";
+import {snakeToCamel} from "./lib/snakeToCamel.js";
+import {range} from "./lib/range.js";
+import {fetchRetry} from "./lib/fetchRetry.js";
+
 
 dotenv.config({path: "../.env"})
 
@@ -34,6 +39,7 @@ const genHeaders = apiKey => {
     }
 }
 
+const deFetch = url => fetchRetry(url, {headers: genHeaders("apikey-tqYfz7RgRTqk3zGu-SrNyA")})
 
 if (process.env.NODE_ENV === "development") {
     app.use(cors())
@@ -43,8 +49,6 @@ app.get("/signin", (req, res) => {
     const WDAPI = new URL("https://api-dot-pgdragonsong.appspot.com/api/authorize")
     WDAPI.searchParams.append("client_id", process.env.clientId)
     WDAPI.searchParams.append("scopes", "atlas.read,player.public.read")
-    // res.send(`URL: ${WDAPI}`)
-    //https://api-dot-pgdragonsong.appspot.com/api/authorize?client_id=app-X-dX6RrcT7andAWa83Ypdg&scopes=atlas.read,player.public.read
     res.redirect(WDAPI)
 })
 app.get("/myprofile", async(req, res) => {
@@ -100,5 +104,70 @@ app.get("/authorize", async (req, res) => {
         .then(jsonData => console.log(jsonData))
     res.send(`Thank you for authorizing with PG, your player id is: ${playerId} and your code is: ${authCode}`)
 })
-connectToDb().then(async () => app.listen(port, () => console.log("Cooking With Fire")))
+
+const castles = fetch(endpoints.getAllCastles(), {  headers: genHeaders("apikey-tqYfz7RgRTqk3zGu-SrNyA")})
+    .then(res => res.json())
+const teams = fetch(endpoints.getAllTeams(), {
+    headers: genHeaders("apikey-tqYfz7RgRTqk3zGu-SrNyA")
+})
+    .then(res => res.json())
+Promise.all([
+    castles,
+    teams
+]).then(async ([castleData, teamData]) => {
+    const teamNames = Object.keys(teamData)
+    const castleEntries = Object.entries(castleData)
+        .filter(([location, {owner_team}]) => teamNames.includes(owner_team))
+        .map(([location]) => [location.split("-")[1], location.split("-")[0]])
+    const generatePromises = step => range(0, castleEntries.length, step)
+        .map(curr => deFetch(endpoints.castleInfo(castleEntries.slice(curr, curr+step))))
+    const extraData = generatePromises(100)
+    await Promise.all(extraData)
+        .then(res => {
+            console.log(res[0])
+            return res
+        })
+        .then(res => res.reduce((prev, curr) => prev.concat(curr), []))
+        .then(detailedResults => {
+            console.log(detailedResults.length)
+            Object.entries(detailedResults[0]).map(([loc, extraInfo]) => {
+                const location = loc.substring(2)
+                castleData[location] = {
+                    ...castleData[location],
+                    ...extraInfo
+                }
+            })
+        })
+    for (const [teamName, entry] of Object.entries(teamData)) {
+        const teamCastles = Object.entries(castleData)
+            .filter(([location, castleInfo]) => castleInfo.owner_team === teamName)
+            .map(([location, info]) => ({
+                location: location,
+                ...info,
+                coords: {
+                    x: info.coords.x/40,
+                    y: info.coords.y/40
+                }
+            }))
+        const updatedData = {
+            ...Object.entries(entry).reduce((prev, [fieldName, value]) => {
+                prev[snakeToCamel(fieldName)] = value
+                return prev
+            }, {}),
+            castles: teamCastles
+        }
+        await Team.findOneAndUpdate(
+            {name: teamName},
+            { $set: updatedData },
+            {
+                new: true,
+                upsert: true,
+                setDefaultsOnInsert: true
+            })
+    }
+})
+
+connectToDb().then(
+    async () => app.listen(port, () => console.log("Cooking With Fire"))
+)
 
